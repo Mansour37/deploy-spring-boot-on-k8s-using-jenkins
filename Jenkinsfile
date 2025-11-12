@@ -47,7 +47,8 @@ pipeline {
                               --project springboot-k8s \
                               --scan . \
                               --format HTML \
-                              --out reports || true
+                              --out reports \
+                              || true
                         fi
                     '''
                 }
