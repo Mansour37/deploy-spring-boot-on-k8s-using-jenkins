@@ -7,7 +7,6 @@ pipeline {
 
     environment {
         dockerimagename = "mansour38/spring-boot-k8s"
-        registryCredential = 'dockerhub-credentials'
     }
 
     stages {
@@ -35,23 +34,15 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Pushing Image') {
+            environment {
+                registryCredential = 'dockerhub-credentials'
+            }
             steps {
                 script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'dockerhub-credentials',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
-                        // Connexion Docker
-                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-
-                        // Push avec deux tags
-                        sh "docker push ${dockerimagename}:${BUILD_NUMBER}"
-                        sh "docker tag ${dockerimagename}:${BUILD_NUMBER} ${dockerimagename}:latest"
-                        sh "docker push ${dockerimagename}:latest"
-
-                        sh 'docker logout'
+                    docker.withRegistry('https://index.docker.io/v1/', registryCredential) {
+                        dockerImage.push("latest")
+                        dockerImage.push("${BUILD_NUMBER}")
                     }
                 }
             }
