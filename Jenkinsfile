@@ -43,35 +43,17 @@ pipeline {
         // 4️⃣ Push de l’image sur DockerHub
         // 4️⃣ Push de l’image sur DockerHub (Solution Alternative)
 // 4️⃣ Push de l’image sur DockerHub (Solution Alternative)
-    stage('Push Docker Image') {
-        steps {
-            script {
-                withCredentials([usernamePassword(
-                    credentialsId: env.registryCredential, 
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS')]) 
-                {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-
-                    def imageBuildName = "mansour38/spring-boot-k8s"
-                    def imageTag = "${imageBuildName}:${env.BUILD_NUMBER}"
-                    
-                    // Correction du tag manquant :
-                    // La Stage 3 construit l'image, MAIS la commande "docker build" taggue l'image
-                    // avec le nom donné par le plugin Docker. Si l'image n'est pas taguée correctement, 
-                    // les push suivants échouent.
-                    
-                    // Ajout d'une commande pour s'assurer que l'image est bien taguée
-                    sh "docker tag ${imageBuildName}:latest ${imageTag}" // Tag l'image construite avec le BUILD_NUMBER
-                    sh "docker tag ${imageBuildName}:latest ${imageBuildName}:latest" // S'assure que le latest est correct
-                    
-                    sh "docker push ${imageTag}"
-                    sh "docker push ${imageBuildName}:latest"
-                    
-                    sh 'docker logout'
-                }
-            }
+    stage('Pushing Image') {
+      environment {
+               registryCredential = 'dockerhub-credentials'
+           }
+      steps{
+        script {
+          docker.withRegistry( 'https://registry.hub.docker.com', registryCredential ) {
+            dockerImage.push("latest")
+          }
         }
+      }
     }
 
 
