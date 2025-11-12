@@ -34,7 +34,7 @@ pipeline {
             }
         }
 
-        stage('SCA -') {
+        stage('SCA - Analyse des dépendances') {
             steps {
                 echo '📦 Analyse des dépendances avec OWASP Dependency-Check...'
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
@@ -53,6 +53,7 @@ pipeline {
                 }
             }
         }
+
 
 
         stage('Build Docker Image') {
