@@ -5,7 +5,7 @@ pipeline {
 
   environment {
     dockerimagename = "mansour38/spring-boot-k8s"
-    // SONAR_AUTH_TOKEN doit exister côté Jenkins Credentials (Secret Text) si besoin.
+    // SONAR_AUTH_TOKEN doit exister dans Jenkins (Secret Text) si besoin.
   }
 
   stages {
@@ -40,7 +40,6 @@ pipeline {
           export PATH="/usr/local/bin:$PATH"
           mkdir -p reports
 
-          # SCA + secrets + IaC (fail si HIGH/CRITICAL)
           trivy fs . \
             --security-checks vuln,secret,config \
             --severity HIGH,CRITICAL \
@@ -48,7 +47,6 @@ pipeline {
             --ignore-unfixed \
             -f json -o reports/trivy-fs.json
 
-          # HTML si le template existe
           if [ -f /usr/local/share/trivy-html.tpl ]; then
             trivy fs . \
               --security-checks vuln,secret,config \
@@ -118,18 +116,18 @@ pipeline {
         }
       }
     }
-  } // <-- fin du block stages (tout est bien à l’intérieur)
+  }
 
   post {
     always {
-      // Archive JSON + HTML (même si HTML absent)
       archiveArtifacts artifacts: 'reports/*.json, reports/*.html', fingerprint: true, allowEmptyArchive: true
     }
     success {
       echo '✅ OK : Compile → Test → SAST → SCA → Build → Image Scan → Push → Deploy.'
     }
     failure {
-      echo '❌ KO — vérifie les logs (Trivy/sonar peuvent faire échouer sur HIGH/CRITICAL).'
+      echo '❌ KO — vérifie les logs (Trivy/Sonar peuvent échouer sur HIGH/CRITICAL).'
     }
   }
 }
+
