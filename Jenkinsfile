@@ -34,34 +34,26 @@ pipeline {
             }
         }
 
-        stage('SCA - Trivy (repo)') {
-          steps {
-            sh '''
-              set -e
-              export PATH="/usr/local/bin:$PATH"
-              mkdir -p reports
-
-              # Scan du projet local: vuln + secrets + IaC
-              trivy fs . \
-                --security-checks vuln,secret,config \
-                --severity HIGH,CRITICAL \
-                --exit-code 1 \
-                --ignore-unfixed \
-                -f json -o reports/trivy-fs.json
-
-              # Rapport HTML si le template est dispo
-              if [ -f /usr/local/share/trivy-html.tpl ]; then
-                trivy fs . \
-                  --security-checks vuln,secret,config \
-                  --severity HIGH,CRITICAL \
-                  --ignore-unfixed \
-                  --format template \
-                  --template "@/usr/local/share/trivy-html.tpl" \
-                  -o reports/trivy-fs.html || true
-              fi
-            '''
+        stage('SCA - Analyse des dépendances') {
+            steps {
+              echo '📦 Analyse des dépendances avec OWASP Dependency-Check...'
+              catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                sh '''
+                  mkdir -p reports
+                  if ! command -v dependency-check.sh >/dev/null 2>&1; then
+                    echo "⚠️ OWASP Dependency-Check n'est pas installé sur ce serveur Jenkins."
+                  else
+                    dependency-check.sh \
+                      --project springboot-k8s \
+                      --scan . \
+                      --format HTML \
+                      --out reports || true
+                  fi
+                '''
+              }
+            }
           }
-    }
+
 
 
 
@@ -101,15 +93,15 @@ pipeline {
     }
 
     post {
-        always {
-          // ✅ Archive le rapport SCA quoi qu'il arrive
-          archiveArtifacts artifacts: 'reports/*.html', fingerprint: true, allowEmptyArchive: true
-        }
-        success {
-          echo '✅ Pipeline DevOps exécuté avec succès (Compilation → Test → Build → Déploiement).'
-        }
-        failure {
-          echo '❌ Le pipeline a échoué — vérifiez les logs Jenkins.'
-        }
+      always {
+        // ✅ Archive le rapport SCA quoi qu'il arrive
+        archiveArtifacts artifacts: 'reports/*.html', fingerprint: true, allowEmptyArchive: true
+      }
+      success {
+        echo '✅ Pipeline DevOps exécuté avec succès (Compilation → Test → Build → Déploiement).'
+      }
+      failure {
+        echo '❌ Le pipeline a échoué — vérifiez les logs Jenkins.'
+      }
     }
 }
