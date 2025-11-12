@@ -25,6 +25,15 @@ pipeline {
             }
         }
 
+        stage('SAST - Analyse de sécurité du code') {
+            steps {
+                echo '🔒 Analyse de sécurité SAST avec SonarQube...'
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=spring-boot-k8s -Dsonar.host.url=http://localhost:9000 -Dsonar.login=$SONAR_AUTH_TOKEN'
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 echo '🐳 Construction de l’image Docker...'
