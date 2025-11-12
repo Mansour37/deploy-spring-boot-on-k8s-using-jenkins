@@ -41,7 +41,7 @@ pipeline {
                 export PATH="/usr/local/bin:$PATH"
                 mkdir -p reports
 
-                # ✅ Nouveaux flags
+                # Scan du code (fs)
                 trivy fs . \
                   --scanners vuln,misconfig,secret \
                   --severity HIGH,CRITICAL \
@@ -49,7 +49,7 @@ pipeline {
                   --ignore-unfixed \
                   -f json -o reports/trivy-fs.json
 
-                # (Optionnel) HTML via template contrib si présent
+                # Rapport HTML si le template existe
                 if [ -f /usr/local/share/trivy-html.tpl ]; then
                   trivy fs . \
                     --scanners vuln,misconfig,secret \
@@ -62,9 +62,6 @@ pipeline {
               '''
             }
           }
-
-
-
 
 
 
@@ -102,16 +99,10 @@ pipeline {
         }
     }
 
-    post {
+        post {
       always {
-        // ✅ Archive le rapport SCA quoi qu'il arrive
-        archiveArtifacts artifacts: 'reports/*.html', fingerprint: true, allowEmptyArchive: true
-      }
-      success {
-        echo '✅ Pipeline DevOps exécuté avec succès (Compilation → Test → Build → Déploiement).'
-      }
-      failure {
-        echo '❌ Le pipeline a échoué — vérifiez les logs Jenkins.'
+        archiveArtifacts artifacts: 'reports/*.json, reports/*.html',
+          fingerprint: true, allowEmptyArchive: true
       }
     }
 }
