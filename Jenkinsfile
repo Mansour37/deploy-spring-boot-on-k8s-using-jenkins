@@ -5,10 +5,10 @@ pipeline {
 
   environment {
     dockerimagename = "mansour38/spring-boot-k8s"
-    // SONAR_AUTH_TOKEN doit exister dans Jenkins (Secret Text) si besoin.
+    // SONAR_AUTH_TOKEN : credential Jenkins (Secret Text), si besoin.
   }
 
-  stages {
+  stages {                       // ← tout ce qui suit doit rester DEDANS
 
     stage('Compilation') {
       steps {
@@ -116,18 +116,14 @@ pipeline {
         }
       }
     }
-  }
+
+  } // ← FIN du bloc stages
 
   post {
     always {
       archiveArtifacts artifacts: 'reports/*.json, reports/*.html', fingerprint: true, allowEmptyArchive: true
     }
-    success {
-      echo '✅ OK : Compile → Test → SAST → SCA → Build → Image Scan → Push → Deploy.'
-    }
-    failure {
-      echo '❌ KO — vérifie les logs (Trivy/Sonar peuvent échouer sur HIGH/CRITICAL).'
-    }
+    success { echo '✅ OK : Compile → Test → SAST → SCA → Build → Image Scan → Push → Deploy.' }
+    failure { echo '❌ KO — vérifie les logs (Trivy/Sonar peuvent échouer sur HIGH/CRITICAL).' }
   }
 }
-
