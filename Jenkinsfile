@@ -35,16 +35,16 @@ pipeline {
         }
 
         stage('SCA - Analyse des dépendances') {
-        steps {
-            echo '📦 Analyse des dépendances avec OWASP Dependency-Check...'
-              sh '''
+            steps {
+              echo '📦 Analyse des dépendances avec OWASP Dependency-Check...'
+                sh '''
                 dependency-check.sh \
                   --project springboot-k8s \
                   --scan . \
                   --format HTML \
                   --out reports/dependency-check-report.html || true
-              '''
-          }
+                '''
+           }
         }
 
         stage('Build Docker Image') {
