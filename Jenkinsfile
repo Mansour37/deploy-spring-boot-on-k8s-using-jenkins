@@ -1,5 +1,3 @@
-// small update to test git push
-
 pipeline {
     agent any
 
@@ -14,7 +12,6 @@ pipeline {
 
     stages {
 
-        // 1️⃣ Compilation du code
         stage('Compilation') {
             steps {
                 echo '⚙️ Compilation du projet Spring Boot...'
@@ -22,7 +19,6 @@ pipeline {
             }
         }
 
-        // 2️⃣ Exécution des tests unitaires
         stage('Tests') {
             steps {
                 echo '🧪 Exécution des tests unitaires Maven...'
@@ -30,34 +26,37 @@ pipeline {
             }
         }
 
-        // 3️⃣ Construction de l’image Docker
         stage('Build Docker Image') {
             steps {
-                echo ' Construction de l’image Docker...'
+                echo '🐳 Construction de l’image Docker...'
                 script {
                     dockerImage = docker.build("${dockerimagename}:${BUILD_NUMBER}", ".")
                 }
             }
         }
 
-        // 4️⃣ Push de l’image sur DockerHub
-        // 4️⃣ Push de l’image sur DockerHub (Solution Alternative)
-// 4️⃣ Push de l’image sur DockerHub (Solution Alternative)
-    stage('Pushing Image') {
-      environment {
-               registryCredential = 'dockerhub-credentials'
-           }
-      steps{
-        script {
-          docker.withRegistry( 'https://registry.hub.docker.com', registryCredential ) {
-            dockerImage.push("latest")
-          }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+                        // Connexion Docker
+                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+
+                        // Push avec deux tags
+                        sh "docker push ${dockerimagename}:${BUILD_NUMBER}"
+                        sh "docker tag ${dockerimagename}:${BUILD_NUMBER} ${dockerimagename}:latest"
+                        sh "docker push ${dockerimagename}:latest"
+
+                        sh 'docker logout'
+                    }
+                }
+            }
         }
-      }
-    }
 
-
-        // 5️⃣ Déploiement sur Kubernetes
         stage('Déploiement') {
             steps {
                 echo '📦 Déploiement sur le cluster Kubernetes...'
