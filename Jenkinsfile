@@ -35,31 +35,34 @@ pipeline {
         }
 
          stage('SCA - Trivy (repo)') {
-          steps {
-            sh '''
-              set -e
-              export PATH="/usr/local/bin:$PATH"
-              mkdir -p reports
+            steps {
+              sh '''
+                set -e
+                export PATH="/usr/local/bin:$PATH"
+                mkdir -p reports
 
-              trivy fs . \
-                --security-checks vuln,secret,config \
-                --severity HIGH,CRITICAL \
-                --exit-code 1 \
-                --ignore-unfixed \
-                -f json -o reports/trivy-fs.json
-
-              if [ -f /usr/local/share/trivy-html.tpl ]; then
+                # ✅ Nouveaux flags
                 trivy fs . \
-                  --security-checks vuln,secret,config \
+                  --scanners vuln,misconfig,secret \
                   --severity HIGH,CRITICAL \
+                  --exit-code 1 \
                   --ignore-unfixed \
-                  --format template \
-                  --template "@/usr/local/share/trivy-html.tpl" \
-                  -o reports/trivy-fs.html || true
-              fi
-            '''
+                  -f json -o reports/trivy-fs.json
+
+                # (Optionnel) HTML via template contrib si présent
+                if [ -f /usr/local/share/trivy-html.tpl ]; then
+                  trivy fs . \
+                    --scanners vuln,misconfig,secret \
+                    --severity HIGH,CRITICAL \
+                    --ignore-unfixed \
+                    --format template \
+                    --template "@/usr/local/share/trivy-html.tpl" \
+                    -o reports/trivy-fs.html || true
+                fi
+              '''
+            }
           }
-        }
+
 
 
 
