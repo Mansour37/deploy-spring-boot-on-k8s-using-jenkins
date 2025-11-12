@@ -1,5 +1,5 @@
 # Use a base image with Java and a minimal Linux distribution
-FROM openjdk:11-jre-slim
+FROM eclipse-temurin:17-jre-alpine
 
 # Set the working directory inside the container
 WORKDIR /app
