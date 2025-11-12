@@ -1,64 +1,98 @@
+// small update to test git push
+
 pipeline {
+    agent any
 
-  tools {
-        // Specify the name of the Maven installation defined in Jenkins
+    tools {
         maven 'Maven'
-   }
+    }
 
-  environment {
-    dockerimagename = "abdessamadzebbara/spring-boot-k8s"
-    dockerImage = ""
-  }
+    environment {
+        dockerimagename = "mansour38/spring-boot-k8s"
+        registryCredential = 'dockerhub-credentials'
+    }
 
-  agent any
+    stages {
 
-  stages {
+        // 1️⃣ Compilation du code
+        stage('Compilation') {
+            steps {
+                echo '⚙️ Compilation du projet Spring Boot...'
+                sh 'mvn clean package -DskipTests'
+            }
+        }
 
-    stage('Build App') {
+        // 2️⃣ Exécution des tests unitaires
+        stage('Tests') {
+            steps {
+                echo '🧪 Exécution des tests unitaires Maven...'
+                sh 'mvn test'
+            }
+        }
+
+        // 3️⃣ Construction de l’image Docker
+        stage('Build Docker Image') {
+            steps {
+                echo ' Construction de l’image Docker...'
+                script {
+                    dockerImage = docker.build("${dockerimagename}:${BUILD_NUMBER}", ".")
+                }
+            }
+        }
+
+        // 4️⃣ Push de l’image sur DockerHub
+        // 4️⃣ Push de l’image sur DockerHub (Solution Alternative)
+// 4️⃣ Push de l’image sur DockerHub (Solution Alternative)
+    stage('Push Docker Image') {
         steps {
-            // Build your Spring Boot application
-            sh 'mvn clean package' // Adjust your build command
+            script {
+                withCredentials([usernamePassword(
+                    credentialsId: env.registryCredential, 
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS')]) 
+                {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+
+                    def imageBuildName = "mansour38/spring-boot-k8s"
+                    def imageTag = "${imageBuildName}:${env.BUILD_NUMBER}"
+                    
+                    // Correction du tag manquant :
+                    // La Stage 3 construit l'image, MAIS la commande "docker build" taggue l'image
+                    // avec le nom donné par le plugin Docker. Si l'image n'est pas taguée correctement, 
+                    // les push suivants échouent.
+                    
+                    // Ajout d'une commande pour s'assurer que l'image est bien taguée
+                    sh "docker tag ${imageBuildName}:latest ${imageTag}" // Tag l'image construite avec le BUILD_NUMBER
+                    sh "docker tag ${imageBuildName}:latest ${imageBuildName}:latest" // S'assure que le latest est correct
+                    
+                    sh "docker push ${imageTag}"
+                    sh "docker push ${imageBuildName}:latest"
+                    
+                    sh 'docker logout'
+                }
+            }
         }
     }
-    
-    stage('Build image') {
-      steps{
-        script {
-          dockerImage = docker.build dockerimagename
+
+
+        // 5️⃣ Déploiement sur Kubernetes
+        stage('Déploiement') {
+            steps {
+                echo '📦 Déploiement sur le cluster Kubernetes...'
+                withKubeConfig([credentialsId: 'mykubeconfig', serverUrl: 'https://192.168.49.2:8443']) {
+                    sh 'kubectl apply -f deployment-k8s.yaml'
+                    sh 'kubectl get pods -o wide'
+                }
+            }
         }
-      }
     }
 
-    stage('Pushing Image') {
-      environment {
-               registryCredential = 'dockerhub-credentials'
-           }
-      steps{
-        script {
-          docker.withRegistry( 'https://registry.hub.docker.com', registryCredential ) {
-            dockerImage.push("latest")
-          }
+    post {
+        success {
+            echo '✅ Pipeline DevOps exécuté avec succès (Compilation → Test → Build → Déploiement).'
         }
-      }
-    }
-
-    stage('Deploy to Kubernetes') {
-      steps{
-          withKubeConfig([credentialsId: 'mykubeconfig', serverUrl: 'https://192.168.49.2:8443']) {
-            sh 'kubectl apply -f deployment-k8s.yaml'
+        failure {
+            echo '❌ Le pipeline a échoué — vérifiez les logs Jenkins.'
         }
-      }
     }
-
-  }
-
-  post {
-      success {
-          echo 'Deployment successful!'
-      }
-      failure {
-          echo 'Deployment failed.'
-      }
-  }
-
 }
