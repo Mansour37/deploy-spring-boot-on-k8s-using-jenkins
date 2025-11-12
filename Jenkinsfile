@@ -36,16 +36,24 @@ pipeline {
 
         stage('SCA - Analyse des dépendances') {
             steps {
-              echo '📦 Analyse des dépendances avec OWASP Dependency-Check...'
-                sh '''
-                dependency-check.sh \
-                  --project springboot-k8s \
-                  --scan . \
-                  --format HTML \
-                  --out reports/dependency-check-report.html || true
-                '''
-           }
+                echo '📦 Analyse des dépendances avec OWASP Dependency-Check...'
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    sh '''
+                        mkdir -p reports
+                        if ! command -v dependency-check.sh &> /dev/null; then
+                            echo "⚠️ OWASP Dependency-Check n'est pas installé sur ce serveur Jenkins."
+                        else
+                            dependency-check.sh \
+                              --project springboot-k8s \
+                              --scan . \
+                              --format HTML \
+                              --out reports || true
+                        fi
+                    '''
+                }
+            }
         }
+
 
         stage('Build Docker Image') {
             steps {
