@@ -72,6 +72,39 @@ pipeline {
             }
         }
 
+        stage('Trivy (Scan Docker image)') {
+            steps {
+                script {
+                    def status = sh(
+                        script: """
+                            export PATH="/usr/local/bin:$PATH"
+                            mkdir -p reports
+
+                            trivy image ${dockerimagename}:${BUILD_NUMBER} \
+                              --severity HIGH,CRITICAL \
+                              --exit-code 1 \
+                              --ignore-unfixed \
+                              -f json -o reports/trivy-image.json || true
+
+                            if [ -f /usr/local/share/trivy-html.tpl ]; then
+                              trivy image ${dockerimagename}:${BUILD_NUMBER} \
+                                --severity HIGH,CRITICAL \
+                                --ignore-unfixed \
+                                --format template \
+                                --template "@/usr/local/share/trivy-html.tpl" \
+                                -o reports/trivy-image.html || true
+                            fi
+                        """,
+                        returnStatus: true
+                    )
+
+                    if (status == 1) {
+                        currentBuild.result = 'UNSTABLE'
+                        echo '⚠️ Vulnérabilités détectées dans l’image Docker.'
+                    }
+                }
+            }
+        }
         stage('Pushing Image') {
             environment {
                 registryCredential = 'dockerhub-credentials'
