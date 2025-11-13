@@ -1,10 +1,9 @@
-# Define the Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spring-boot-k8s-deployment
 spec:
-  replicas: 2 # Number of desired replicas
+  replicas: 2
   selector:
     matchLabels:
       app: spring-boot-k8s
@@ -15,13 +14,12 @@ spec:
     spec:
       containers:
         - name: spring-boot-k8s-container
-          image: abdessamadzebbara/spring-boot-k8s:latest # Replace with your Docker image name and tag
+          image: mansour38/spring-boot-k8s:latest
+          imagePullPolicy: Always
           ports:
-            - containerPort: 8089
+            - containerPort: 8080
 
 ---
-
-# Define the Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -32,5 +30,6 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 8089
-  type: NodePort # Exposes the service on a random port on each Minikube node
+      targetPort: 8080
+      nodePort: 30080
+  type: NodePort
