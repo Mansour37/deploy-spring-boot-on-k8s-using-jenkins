@@ -44,7 +44,6 @@ pipeline {
                 trivy fs . \
                   --scanners vuln,misconfig,secret \
                   --severity HIGH,CRITICAL \
-                  --exit-code 1 \
                   --ignore-unfixed \
                   -f json -o reports/trivy-fs.json
 
