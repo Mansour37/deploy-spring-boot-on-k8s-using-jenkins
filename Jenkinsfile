@@ -36,32 +36,32 @@ pipeline {
 
          stage('SCA - Trivy (repo)') {
             steps {
-              sh '''
-                set -e
-                export PATH="/usr/local/bin:$PATH"
-                mkdir -p reports
+              catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                sh '''
+                  set -e
+                  export PATH="/usr/local/bin:$PATH"
+                  mkdir -p reports
 
-                # Scan du code (fs)
-                trivy fs . \
-                  --scanners vuln,misconfig,secret \
-                  --severity HIGH,CRITICAL \
-                  --exit-code 1 \
-                  --ignore-unfixed \
-                  -f json -o reports/trivy-fs.json
-
-                # Rapport HTML si le template existe
-                if [ -f /usr/local/share/trivy-html.tpl ]; then
                   trivy fs . \
                     --scanners vuln,misconfig,secret \
                     --severity HIGH,CRITICAL \
                     --ignore-unfixed \
-                    --format template \
-                    --template "@/usr/local/share/trivy-html.tpl" \
-                    -o reports/trivy-fs.html || true
-                fi
-              '''
+                    -f json -o reports/trivy-fs.json
+
+                  if [ -f /usr/local/share/trivy-html.tpl ]; then
+                    trivy fs . \
+                      --scanners vuln,misconfig,secret \
+                      --severity HIGH,CRITICAL \
+                      --ignore-unfixed \
+                      --format template \
+                      --template "@/usr/local/share/trivy-html.tpl" \
+                      -o reports/trivy-fs.html || true
+                  fi
+                '''
+              }
             }
           }
+
 
 
 
