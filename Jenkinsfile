@@ -36,28 +36,25 @@ pipeline {
 
          stage('SCA - Trivy (repo)') {
             steps {
-              catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                sh '''
-                  export PATH="/usr/local/bin:$PATH"
-                  mkdir -p reports
-
-                  trivy fs . \
-                    --scanners vuln,misconfig,secret \
-                    --severity HIGH,CRITICAL \
-                    --exit-code 1 \
-                    --ignore-unfixed \
-                    -f json -o reports/trivy-fs.json
-
-                  if [ -f /usr/local/share/trivy-html.tpl ]; then
+              script {
+                def status = sh(
+                  script: '''
+                    export PATH="/usr/local/bin:$PATH"
+                    mkdir -p reports
                     trivy fs . \
                       --scanners vuln,misconfig,secret \
                       --severity HIGH,CRITICAL \
+                      --exit-code 1 \
                       --ignore-unfixed \
-                      --format template \
-                      --template "@/usr/local/share/trivy-html.tpl" \
-                      -o reports/trivy-fs.html || true
-                  fi
-                '''
+                      -f json -o reports/trivy-fs.json || true
+                  ''',
+                  returnStatus: true
+                )
+
+                if (status == 1) {
+                  currentBuild.result = 'UNSTABLE'
+                  echo '⚠️ Vulnérabilités détectées (HIGH/CRITICAL) — voir le rapport Trivy.'
+                }
               }
             }
           }
