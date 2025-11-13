@@ -146,6 +146,37 @@ pipeline {
         }
     }
 
+    stage('DAST - OWASP ZAP (baseline)') {
+        steps {
+            script {
+            sh """
+                export APP_URL="http://localhost:8080"   # adapte si NodePort (ex: http://<minikubeIP>:30080)
+                mkdir -p reports
+
+                docker run --rm \
+                -v \$PWD/reports:/zap/wrk \
+                -v \$PWD/zap-baseline.conf:/zap/wrk/zap-baseline.conf:ro \
+                owasp/zap2docker-stable zap-baseline.py \
+                    -t "\$APP_URL" \
+                    -r "reports/zap-baseline.html" \
+                    -J "reports/zap-baseline.json" \
+                    -w "reports/zap-warnings.txt" \
+                    -c "zap-baseline.conf" \
+                    -m 5 \
+                    -d || true
+            """
+
+            // Marquer UNSTABLE si des Medium/High existent (ZAP baseline renvoie non-0 si warnings)
+            def status = sh(script: "grep -E '(High|Medium)\\s+Alerts' reports/zap-baseline.html >/dev/null 2>&1; echo \$?", returnStdout: true).trim()
+            if (status == "0") {
+                currentBuild.result = 'UNSTABLE'
+                echo '⚠️ ZAP Baseline: des alertes Medium/High ont été détectées.'
+            }
+            }
+        }
+        }
+
+
         post {
       always {
         archiveArtifacts artifacts: 'reports/*.json, reports/*.html',
