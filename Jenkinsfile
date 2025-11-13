@@ -34,6 +34,22 @@ pipeline {
             }
         }
 
+        stage('Secrets Scan - Gitleaks') {
+            steps {
+                echo '🔑 Scan des secrets avec Gitleaks...'
+                sh '''
+                    mkdir -p reports
+                    gitleaks detect \
+                        --source . \
+                        --no-git \
+                        --report-path reports/gitleaks.json \
+                        --report-format json \
+                        --exit-code 1 || true
+                '''
+            }
+        }
+
+
          stage('SCA - Trivy (repo)') {
             steps {
               script {
