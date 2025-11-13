@@ -18,12 +18,6 @@ pipeline {
             }
         }
 
-        stage('Tests') {
-            steps {
-                echo '🧪 Exécution des tests unitaires Maven...'
-                sh 'mvn test'
-            }
-        }
 
         stage('SAST - Analyse de sécurité du code') {
             steps {
@@ -75,7 +69,12 @@ pipeline {
             }
           }
 
-
+           stage('Tests') {
+            steps {
+                echo '🧪 Exécution des tests unitaires Maven...'
+                sh 'mvn test'
+            }
+        }
 
 
 
